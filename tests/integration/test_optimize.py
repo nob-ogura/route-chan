@@ -205,3 +205,92 @@ def test_optimize_rate_limited_returns_429(app_client, monkeypatch):
     assert r3.status_code == 429
     assert r3.get_json().get("error") == "RATE_LIMITED"
 
+
+def test_optimize_zero_locations_returns_400(app_client):
+    client = app_client
+    payload = _payload(0)
+    resp = client.post("/api/optimize", json=payload)
+    assert resp.status_code == 400
+    # Validation error should be returned for 0 locations
+    assert resp.get_json().get("error") == "VALIDATION_ERROR"
+
+
+@responses.activate
+def test_optimize_one_location_success(app_client):
+    import server.osrm_client as oc
+
+    client = app_client
+    base_url = "https://osrm.test"
+
+    payload = _payload(1)
+    coords = [
+        (payload["depot"]["lat"], payload["depot"]["lng"])
+    ] + [
+        (loc["lat"], loc["lng"]) for loc in payload["locations"]
+    ]
+    table_url = f"{base_url}/table/v1/driving/{oc._coords_to_path(coords)}?annotations=distance"
+
+    # Asymmetric but deterministic 2x2 matrix
+    dm = [
+        [0, 7],
+        [3, 0],
+    ]
+    responses.add(responses.GET, table_url, json={"distances": dm}, status=200)
+
+    route_re = re.compile(r"^https://osrm\.test/route/v1/driving/.+\?overview=full&geometries=polyline6$")
+    responses.add(
+        responses.GET,
+        route_re,
+        json={"routes": [{"legs": [{"geometry": "g0"}, {"geometry": "g1"}]}]},
+        status=200,
+    )
+
+    resp = client.post("/api/optimize", json=payload)
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["route"] in ([0],)
+    # total should equal 0->1 + 1->0 = 7 + 3
+    assert data["total_distance"] == _tour_cost(dm, [0, 1, 0])
+    assert data["route_geometries"] == ["g0", "g1"]
+
+
+@responses.activate
+def test_optimize_ten_locations_success(app_client):
+    import server.osrm_client as oc
+
+    client = app_client
+    base_url = "https://osrm.test"
+
+    payload = _payload(10)
+    coords = [
+        (payload["depot"]["lat"], payload["depot"]["lng"])
+    ] + [
+        (loc["lat"], loc["lng"]) for loc in payload["locations"]
+    ]
+    table_url = f"{base_url}/table/v1/driving/{oc._coords_to_path(coords)}?annotations=distance"
+
+    # Construct a simple deterministic distance matrix: cost = |i - j| * 10
+    n = len(coords)
+    dm = [[0 if i == j else abs(i - j) * 10 for j in range(n)] for i in range(n)]
+    responses.add(responses.GET, table_url, json={"distances": dm}, status=200)
+
+    # Return 11 legs (10 locations + return to depot)
+    route_re = re.compile(r"^https://osrm\.test/route/v1/driving/.+\?overview=full&geometries=polyline6$")
+    legs = [{"geometry": f"L{i}"} for i in range(11)]
+    responses.add(responses.GET, route_re, json={"routes": [{"legs": legs}]}, status=200)
+
+    resp = client.post("/api/optimize", json=payload)
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert set(data.keys()) >= {"route", "total_distance", "route_geometries"}
+    assert len(data["route"]) == 10
+    assert len(data["route_geometries"]) == 11
+
+
+def test_optimize_eleven_locations_returns_400(app_client):
+    client = app_client
+    payload = _payload(11)
+    resp = client.post("/api/optimize", json=payload)
+    assert resp.status_code == 400
+    # Pydantic validation error is expected for > MAX_LOCATIONS
+    assert resp.get_json().get("error") == "VALIDATION_ERROR"
