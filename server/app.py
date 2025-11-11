@@ -1,3 +1,4 @@
+import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -14,7 +15,9 @@ from .solver import solve_tsp_distance_matrix
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "*")
+origins = [o.strip() for o in origins_env.split(",")] if origins_env else "*"
+CORS(app, resources={r"/api/*": {"origins": origins}})
 limiter = Limiter(get_remote_address, app=app, default_limits=[Config.RATE_LIMIT_RULE])
 
 

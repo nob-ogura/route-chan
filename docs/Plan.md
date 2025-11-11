@@ -104,20 +104,31 @@
 - ローカルで一連の登録後の操作（実行→表示）が 5秒以内に完了。
 
 ## 5. デプロイ（MVP）
-- フロントエンド: Cloudflare Pages
-  - ビルド: `npm run build`、出力: `dist`
-  - 設定: `VITE_API_BASE_URL` に Cloud Run の API ベースURLを設定（例: `https://<service>-<hash>-a.run.app`）
-  - ドメイン: Pages のデフォルトドメイン（またはカスタムドメイン）
+- フロントエンド: Cloudflare Workers（静的アセット配信）
+  - ビルド: `npm run build`（出力: `dist`）
+  - 配信: Workers の `assets` 機能で `dist` を配信
+  - ツール: Wrangler（`npm i -D wrangler`）
+  - 例: `wrangler.toml`
+    - `name = "route-chan-frontend"`
+    - `main = "worker.ts"`（最小 Worker）
+    - `compatibility_date = "YYYY-MM-DD"`
+    - `assets = { directory = "./dist" }`
+  - 例: `worker.ts`（SPA フォールバックあり）
+    - `export default { async fetch(request, env) {` `return env.ASSETS.fetch(request)` `} }`
+      - SPA の場合、存在しないパスは `/index.html` にフォールバックする実装を加える
+  - ドメイン: `*.workers.dev` またはカスタムドメインをバインド
+  - API ベース URL: フロントはビルド時に `VITE_API_BASE_URL` を埋め込み
+    - 例: `VITE_API_BASE_URL=https://<cloud-run-host> npm run build && npx wrangler deploy`
 - バックエンド: Google Cloud Run
   - コンテナ: Python/Flask + Gunicorn（`$PORT` で起動）
-  - 環境変数: `OSRM_BASE_URL`, `CORS_ALLOWED_ORIGINS`（Cloudflare Pages のオリジン）, `MAX_LOCATIONS`, `RATE_LIMIT_RULE`, `SOLVER_TIME_LIMIT_MS`
+  - 環境変数: `OSRM_BASE_URL`, `CORS_ALLOWED_ORIGINS`（Cloudflare Workers のオリジン）, `MAX_LOCATIONS`, `RATE_LIMIT_RULE`, `SOLVER_TIME_LIMIT_MS`
   - ヘルスチェック: `/api/health`
-- CORS: Cloudflare Pages のオリジンをホワイトリストに追加。
+- CORS: Cloudflare Workers のオリジン（`*.workers.dev` またはカスタム）をホワイトリストに追加
 - OSRM: 公開デモを利用（開発/検証用途）。安定運用は自前 OSRM を別検討。
 
 受入基準
 - Cloud Run の `GET /api/health` が 200。
-- Cloudflare Pages から本番 API（Cloud Run）に対して最適化が成功し、CORS エラーがない。
+- Cloudflare Workers 配信のフロントから本番 API（Cloud Run）に対して最適化が成功し、CORS エラーがない。
 
 ## 6. リスクと対応
 - OSRM デモのレート制限/不安定
@@ -149,8 +160,8 @@
 - [ ] frontend: ポリライン描画/サマリー表示
 - [ ] 統合検証（10地点/5秒、境界ケース）
 - [ ] デプロイ: Cloud Run（Dockerfile, Gunicorn 起動, 環境変数設定, デプロイ）
-- [ ] デプロイ: Cloudflare Pages（build 設定, 出力 `dist`, `VITE_API_BASE_URL` 設定）
-- [ ] CORS: `CORS_ALLOWED_ORIGINS` に Cloudflare Pages のオリジンを登録
+- [ ] デプロイ: Cloudflare Workers（wrangler 設定, `assets` で `dist` 配信, `VITE_API_BASE_URL` をビルド時に設定）
+- [ ] CORS: `CORS_ALLOWED_ORIGINS` に Cloudflare Workers のオリジンを登録
 
 ## 9. 受入基準（Definition of Done）
 - 機能

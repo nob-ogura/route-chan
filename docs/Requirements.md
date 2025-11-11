@@ -83,7 +83,7 @@ OR-Toolsの `RoutingIndexManager` と距離コールバック関数の実装が�
 
 #### 5. デプロイ環境
 MVPの公開にあたり、以下にデプロイすることとする。
-- フロントエンド: Cloudflare Pages
+- フロントエンド: Cloudflare Workers
 - バックエンド: Google Cloud Run
 
 #### 6. データの永続化

@@ -210,9 +210,9 @@ type OptimizeResponse = {
 ## 13. デプロイ/運用
 
 - **デプロイ先（MVP）**:
-  - フロントエンド: Cloudflare Pages（静的ビルドをデプロイ）
+  - フロントエンド: Cloudflare Workers（静的ビルドをデプロイ）
   - バックエンド: Google Cloud Run（コンテナをデプロイ）
-- **コンテナ化**: 本番はバックエンド（Python/Flask）のみコンテナ化して Cloud Run にデプロイする。フロントエンドは静的サイトとしてビルドし、Cloudflare Pages にデプロイする。ローカル開発では必要に応じて Docker Compose でAPIやモックと連携。
+- **コンテナ化**: 本番はバックエンド（Python/Flask）のみコンテナ化して Cloud Run にデプロイする。フロントエンドは静的サイトとしてビルドし、Cloudflare Workers にデプロイする。ローカル開発では必要に応じて Docker Compose でAPIやモックと連携。
 - **環境変数**:
   - `OSRM_BASE_URL`
   - `CORS_ALLOWED_ORIGINS`
@@ -221,7 +221,7 @@ type OptimizeResponse = {
   - `SOLVER_TIME_LIMIT_MS`
 - **監視**: `/api/health` エンドポイントを定期的に監視。アクセスログとエラーログ（特に5xx系）を収集・監視する仕組みを導入。
   - Cloud Run: サービスのリクエスト/エラーレート、レイテンシ、再起動回数を可視化。
-  - Cloudflare Pages: デプロイ履歴とエラーログを確認。
+  - Cloudflare Workers: デプロイ履歴とエラーログを確認。
 
 ## 14. テスト方針
 
