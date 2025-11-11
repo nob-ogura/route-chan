@@ -17,6 +17,5 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run tests
         run: |
-          cd server
-          . .venv/bin/activate
+          . server/.venv/bin/activate
           pytest -q --maxfail=1 --disable-warnings
