@@ -34,7 +34,7 @@ export default function App() {
 			}}
 		>
 			<header style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
-				<h1 style={{ margin: 0, fontSize: 20 }}>Route-chan</h1>
+				<h1 style={{ margin: 0, fontSize: 20 }}>Route-Optimizer</h1>
 			</header>
 			<section
 				style={{
