@@ -208,6 +208,10 @@ npm run type-check
 
 ## 🚢 デプロイ
 
+本番デプロイの詳細な手順は `docs/tasks/05.md` を参照してください。
+
+公開中のフロントエンド: https://route-chan-frontend.et-n-ogura.workers.dev
+
 ### フロントエンド（Cloudflare Pages）
 
 ```bash

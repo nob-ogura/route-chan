@@ -1,4 +1,7 @@
 {
 	"linter": { "enabled": true },
-	"formatter": { "enabled": true }
+	"formatter": { "enabled": true },
+	"files": {
+		"includes": ["**", "!node_modules", "!dist", "!.wrangler"]
+	}
 }
