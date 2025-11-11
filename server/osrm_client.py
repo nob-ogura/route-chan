@@ -41,6 +41,18 @@ def get_route_geometries(
     data = resp.json()
     if "routes" not in data or not data["routes"]:
         raise OsrmError("OSRM route response missing 'routes'")
-    legs = data["routes"][0].get("legs", [])
-    return [leg.get("geometry", "") for leg in legs]
 
+    route0 = data["routes"][0]
+    # Prefer per-leg geometries when provided (compatible with unit tests/mocks)
+    legs = route0.get("legs", [])
+    leg_geoms = [leg.get("geometry", "") for leg in legs if leg.get("geometry")]
+    if leg_geoms:
+        return leg_geoms
+
+    # Fallback: use the overview polyline for the whole route
+    overview = route0.get("geometry")
+    if overview:
+        return [overview]
+
+    # If neither exists, raise for clearer error handling upstream
+    raise OsrmError("OSRM route response missing both leg and overview geometries")
