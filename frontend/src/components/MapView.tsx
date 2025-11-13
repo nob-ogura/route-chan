@@ -13,7 +13,7 @@ type Props = {
 	onMapClick: (p: LatLng) => void;
 };
 
-const JP_CENTER: LatLng = { lat: 36.2048, lng: 138.2529 };
+const TOKYO_TOWER: LatLng = { lat: 35.6586, lng: 139.7454 };
 
 export default function MapView({
 	depot,
@@ -32,8 +32,8 @@ export default function MapView({
 		// マップ未生成なら初期化
 		if (!mapRef.current && containerRef.current) {
 			const m = L.map(containerRef.current).setView(
-				[JP_CENTER.lat, JP_CENTER.lng],
-				5,
+				[TOKYO_TOWER.lat, TOKYO_TOWER.lng],
+				16,
 			);
 			L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 				attribution:
