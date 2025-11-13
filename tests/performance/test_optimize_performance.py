@@ -8,7 +8,7 @@ import pytest
 import responses
 
 
-# Ensure project root is on sys.path so that `import server` works reliably
+# `import server` が常に動作するようにプロジェクトルートを sys.path に追加する
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -22,16 +22,16 @@ def _reload_module(mod_name: str):
 
 @pytest.fixture()
 def app_client(monkeypatch):
-    # Keep limits and timeouts tight and deterministic for performance test
+    # パフォーマンステストのためにリミットとタイムアウトを厳格かつ決定的に保つ
     monkeypatch.setenv("OSRM_BASE_URL", "https://osrm.test")
-    monkeypatch.setenv("RATE_LIMIT_RULE", "100/second")  # avoid limiter interference
+    monkeypatch.setenv("RATE_LIMIT_RULE", "100/second")  # レートリミッターの干渉を避ける
     monkeypatch.setenv("TIMEOUT_CONNECT", "0.5")
     monkeypatch.setenv("TIMEOUT_READ", "0.5")
-    # Ensure solver has a sane upper bound; typical cases finish far faster
-    # Keep under 3s end-to-end per spec; leave headroom
+    # ソルバーに妥当な上限を設定し、通常ケースではさらに早く終わるようにする
+    # 仕様通りエンドツーエンド 3 秒未満を維持し、余裕を持たせる
     monkeypatch.setenv("SOLVER_TIME_LIMIT_MS", "2500")
 
-    # Reload config and app to apply env
+    # 環境変数を反映させるために設定とアプリを再読み込みする
     _reload_module("server.config")
     app_mod = _reload_module("server.app")
     app = app_mod.app
@@ -50,11 +50,11 @@ def _payload(n_locations: int):
 
 @responses.activate
 def test_optimize_ten_locations_under_3s(app_client):
-    """End-to-end performance: ensure 10 locations complete under ~3s.
+    """エンドツーエンド性能: 10 件のロケーションが約 3 秒以内に完了することを確認する。
 
-    OSRM HTTP calls are mocked for determinism; we still measure the app's
-    full processing including request parsing, distance matrix use, OR-Tools
-    solve, route geometry assembly, and JSON serialization.
+    再現性を保つため OSRM への HTTP 呼び出しはモックするが、
+    リクエストのパース、距離行列の利用、OR-Tools の解法、
+    経路ジオメトリの生成、JSON シリアライズまでアプリの処理全体を測定する。
     """
     import server.osrm_client as oc
 
@@ -62,25 +62,25 @@ def test_optimize_ten_locations_under_3s(app_client):
     base_url = "https://osrm.test"
     payload = _payload(10)
 
-    # Coords as the app builds them: [depot] + locations
+    # アプリと同じ手順で座標を組み立てる: [depot] + locations
     coords = [(payload["depot"]["lat"], payload["depot"]["lng"])]
     coords += [(loc["lat"], loc["lng"]) for loc in payload["locations"]]
 
-    # Mock OSRM table with a simple deterministic matrix
+    # 単純で決定的な行列を使って OSRM の table API をモックする
     table_path = oc._coords_to_path(coords)
     table_url = f"{base_url}/table/v1/driving/{table_path}?annotations=distance"
     n = len(coords)
     dm = [[0 if i == j else abs(i - j) * 10 for j in range(n)] for i in range(n)]
     responses.add(responses.GET, table_url, json={"distances": dm}, status=200)
 
-    # Mock OSRM route with 11 legs (visit 10 locations and return to depot)
+    # 11 本のレグ（10 ロケーション訪問 + デポ帰還）で OSRM の route API をモックする
     route_re = re.compile(
         r"^https://osrm\.test/route/v1/driving/.+\?overview=full&geometries=polyline6$"
     )
     legs = [{"geometry": f"L{i}"} for i in range(11)]
     responses.add(responses.GET, route_re, json={"routes": [{"legs": legs}]}, status=200)
 
-    # Warm-up once (per docs recommendation) to avoid one-time init costs
+    # ドキュメント推奨どおり 1 回ウォームアップして初期化コストを避ける
     _ = client.post("/api/optimize", json=payload)
 
     c_before = len(responses.calls)
@@ -88,15 +88,15 @@ def test_optimize_ten_locations_under_3s(app_client):
     resp = client.post("/api/optimize", json=payload)
     elapsed = time.perf_counter() - t0
 
-    # Basic correctness
+    # 基本的な正しさを検証する
     assert resp.status_code == 200
     data = resp.get_json()
     assert set(data.keys()) >= {"route", "total_distance", "route_geometries"}
     assert len(data["route"]) == 10
     assert len(data["route_geometries"]) == 11
 
-    # Performance target per spec: within ~3 seconds
+    # 仕様上の性能目標: 約 3 秒以内
     assert elapsed < 3.0, f"optimize took {elapsed:.3f}s, exceeds 3s target"
 
-    # Ensure only the minimal OSRM calls are made during the measured request
+    # 計測対象リクエスト中に最小限の OSRM 呼び出ししか行われていないことを確認する
     assert len(responses.calls) - c_before == 2

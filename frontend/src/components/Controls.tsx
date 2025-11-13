@@ -68,11 +68,11 @@ export default function Controls({
 				操作
 			</div>
 
-		<button
-			type="button"
-			onClick={optimize}
-			disabled={busy || loading}
-			style={{
+			<button
+				type="button"
+				onClick={optimize}
+				disabled={busy || loading}
+				style={{
 					padding: "12px 16px",
 					fontSize: "15px",
 					fontWeight: 600,
@@ -107,11 +107,11 @@ export default function Controls({
 				{busy ? "🔄 計算中…" : "🚀 最適化を実行"}
 			</button>
 
-		<button
-			type="button"
-			onClick={onReset}
-			disabled={busy || loading}
-			style={{
+			<button
+				type="button"
+				onClick={onReset}
+				disabled={busy || loading}
+				style={{
 					padding: "10px 16px",
 					fontSize: "14px",
 					fontWeight: 500,
@@ -154,7 +154,7 @@ export default function Controls({
 					}}
 				>
 					<span style={{ fontSize: "16px", flexShrink: 0 }}>⚠️</span>
-					<span>Depot と訪問地点を設定してください。</span>
+					<span>出発地点と訪問地点を設定してください。</span>
 				</div>
 			)}
 
@@ -178,48 +178,48 @@ export default function Controls({
 				</div>
 			)}
 
-		<div
-			style={{
-				fontSize: "12px",
-				color: "#6b7280",
-				padding: "8px 12px",
-				background: "white",
-				borderRadius: "6px",
-				border: "1px solid #e5e7eb",
-				display: "flex",
-				flexDirection: "column",
-				gap: "6px",
-			}}
-		>
-			<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-				<span style={{ fontSize: "14px" }}>📍</span>
-				<span style={{ fontWeight: 600 }}>使い方</span>
+			<div
+				style={{
+					fontSize: "12px",
+					color: "#6b7280",
+					padding: "8px 12px",
+					background: "white",
+					borderRadius: "6px",
+					border: "1px solid #e5e7eb",
+					display: "flex",
+					flexDirection: "column",
+					gap: "6px",
+				}}
+			>
+				<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+					<span style={{ fontSize: "14px" }}>📍</span>
+					<span style={{ fontWeight: 600 }}>使い方</span>
+				</div>
+				<div style={{ paddingLeft: "20px", lineHeight: "1.6" }}>
+					1. 地図をクリックして出発地点を設定
+					<br />
+					2. さらにクリックして訪問地点を追加
+					<br />
+					3. 最適化ボタンを押下して経路を計算
+				</div>
 			</div>
-			<div style={{ paddingLeft: "20px", lineHeight: "1.6" }}>
-				1. 地図をクリックして出発地点を設定
-				<br />
-				2. さらにクリックして訪問地点を追加
-				<br />
-				3. 最適化ボタンを押下して経路を計算
-			</div>
-		</div>
 
-		<div
-			style={{
-				fontSize: "12px",
-				color: "#6b7280",
-				padding: "8px 12px",
-				background: "white",
-				borderRadius: "6px",
-				border: "1px solid #e5e7eb",
-				display: "flex",
-				alignItems: "center",
-				gap: "6px",
-			}}
-		>
-			<span style={{ fontSize: "14px" }}>ℹ️</span>
-			<span>訪問地点の上限は 10 です。</span>
-		</div>
+			<div
+				style={{
+					fontSize: "12px",
+					color: "#6b7280",
+					padding: "8px 12px",
+					background: "white",
+					borderRadius: "6px",
+					border: "1px solid #e5e7eb",
+					display: "flex",
+					alignItems: "center",
+					gap: "6px",
+				}}
+			>
+				<span style={{ fontSize: "14px" }}>ℹ️</span>
+				<span>訪問地点の上限は 10 です。</span>
+			</div>
 		</aside>
 	);
 }

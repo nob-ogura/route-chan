@@ -41,7 +41,6 @@ def optimize():
     except Exception as e:
         return jsonify(error="VALIDATION_ERROR", message=str(e)), 400
 
-    # Redundant but explicit guard per spec
     if not (1 <= len(req.locations) <= Config.MAX_LOCATIONS):
         return (
             jsonify(

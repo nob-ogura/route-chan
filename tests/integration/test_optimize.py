@@ -8,7 +8,7 @@ import pytest
 import responses
 
 
-# Ensure project root is on sys.path so that `import server` works reliably
+# `import server` が常に動作するようにプロジェクトルートを sys.path に追加する
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -22,13 +22,13 @@ def _reload_module(mod_name: str):
 
 @pytest.fixture()
 def app_client(monkeypatch):
-    # Configure environment for predictable tests
+    # テスト結果が安定するように環境変数を設定する
     monkeypatch.setenv("OSRM_BASE_URL", "https://osrm.test")
     monkeypatch.setenv("RATE_LIMIT_RULE", "2/second")
     monkeypatch.setenv("TIMEOUT_CONNECT", "0.2")
     monkeypatch.setenv("TIMEOUT_READ", "0.2")
 
-    # Reload config and app to apply env
+    # 環境変数を反映させるために設定とアプリを再読み込みする
     _reload_module("server.config")
     app_mod = _reload_module("server.app")
     app = app_mod.app
@@ -61,18 +61,18 @@ def test_optimize_success_two_locations(app_client):
 
     payload = _payload(2)
 
-    # Build coords as app does: [depot] + locations
+    # アプリと同じように座標を構築する: [depot] + locations
     coords = [
         (payload["depot"]["lat"], payload["depot"]["lng"])
     ] + [
         (loc["lat"], loc["lng"]) for loc in payload["locations"]
     ]
 
-    # Mock OSRM table (distance matrix)
+    # OSRM の table API（距離行列）をモックする
     table_path = oc._coords_to_path(coords)
     table_url = f"{base_url}/table/v1/driving/{table_path}?annotations=distance"
 
-    # Deterministic asymmetric matrix
+    # 決定的な非対称行列
     dm = [
         [0, 100, 300],
         [120, 0, 200],
@@ -80,7 +80,7 @@ def test_optimize_success_two_locations(app_client):
     ]
     responses.add(responses.GET, table_url, json={"distances": dm}, status=200)
 
-    # Mock OSRM route geometry for any path
+    # 任意の経路に対する OSRM の route ジオメトリをモックする
     route_re = re.compile(
         r"^https://osrm\.test/route/v1/driving/.+\?overview=full&geometries=polyline6$"
     )
@@ -95,7 +95,7 @@ def test_optimize_success_two_locations(app_client):
     assert resp.status_code == 200
     data = resp.get_json()
     assert set(data["route"]) == {0, 1}
-    # total_distance should equal cost along 0 -> (route+1) -> 0 on dm
+    # total_distance は距離行列上で 0 -> (route+1) -> 0 を辿ったコストと一致するはず
     tour_nodes = [0] + [r + 1 for r in data["route"]] + [0]
     assert data["total_distance"] == _tour_cost(dm, tour_nodes)
     assert data["route_geometries"] == ["poly0", "poly1", "poly2"]
@@ -113,7 +113,7 @@ def test_optimize_bad_json_returns_400(app_client):
 
 def test_optimize_validation_error_returns_400(app_client):
     client = app_client
-    # invalid lat range
+    # 緯度の範囲が無効
     payload = _payload(1)
     payload["depot"]["lat"] = 123.456
     resp = client.post("/api/optimize", json=payload)
@@ -179,7 +179,7 @@ def test_optimize_rate_limited_returns_429(app_client, monkeypatch):
     client = app_client
     base_url = "https://osrm.test"
 
-    # Simple payload with one location
+    # 1 件のロケーションだけを持つシンプルなペイロード
     payload = _payload(1)
     coords = [
         (payload["depot"]["lat"], payload["depot"]["lng"])
@@ -197,10 +197,10 @@ def test_optimize_rate_limited_returns_429(app_client, monkeypatch):
         status=200,
     )
 
-    # First two requests succeed
+    # 最初の 2 リクエストは成功する
     assert client.post("/api/optimize", json=payload).status_code == 200
     assert client.post("/api/optimize", json=payload).status_code == 200
-    # Third request within window should be rate-limited
+    # 同じ時間枠内の 3 回目はレート制限されるはず
     r3 = client.post("/api/optimize", json=payload)
     assert r3.status_code == 429
     assert r3.get_json().get("error") == "RATE_LIMITED"
@@ -211,7 +211,7 @@ def test_optimize_zero_locations_returns_400(app_client):
     payload = _payload(0)
     resp = client.post("/api/optimize", json=payload)
     assert resp.status_code == 400
-    # Validation error should be returned for 0 locations
+    # ロケーションが 0 件の場合はバリデーションエラーになるべき
     assert resp.get_json().get("error") == "VALIDATION_ERROR"
 
 
@@ -230,7 +230,7 @@ def test_optimize_one_location_success(app_client):
     ]
     table_url = f"{base_url}/table/v1/driving/{oc._coords_to_path(coords)}?annotations=distance"
 
-    # Asymmetric but deterministic 2x2 matrix
+    # 非対称だが決定的な 2x2 行列
     dm = [
         [0, 7],
         [3, 0],
@@ -249,7 +249,7 @@ def test_optimize_one_location_success(app_client):
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["route"] in ([0],)
-    # total should equal 0->1 + 1->0 = 7 + 3
+    # total は 0->1 + 1->0 = 7 + 3 に等しいはず
     assert data["total_distance"] == _tour_cost(dm, [0, 1, 0])
     assert data["route_geometries"] == ["g0", "g1"]
 
@@ -269,12 +269,12 @@ def test_optimize_ten_locations_success(app_client):
     ]
     table_url = f"{base_url}/table/v1/driving/{oc._coords_to_path(coords)}?annotations=distance"
 
-    # Construct a simple deterministic distance matrix: cost = |i - j| * 10
+    # 単純な決定的距離行列を構築する: cost = |i - j| * 10
     n = len(coords)
     dm = [[0 if i == j else abs(i - j) * 10 for j in range(n)] for i in range(n)]
     responses.add(responses.GET, table_url, json={"distances": dm}, status=200)
 
-    # Return 11 legs (10 locations + return to depot)
+    # 11 本のレグ（10 ロケーション + デポへの戻り）を返す
     route_re = re.compile(r"^https://osrm\.test/route/v1/driving/.+\?overview=full&geometries=polyline6$")
     legs = [{"geometry": f"L{i}"} for i in range(11)]
     responses.add(responses.GET, route_re, json={"routes": [{"legs": legs}]}, status=200)
@@ -292,5 +292,5 @@ def test_optimize_eleven_locations_returns_400(app_client):
     payload = _payload(11)
     resp = client.post("/api/optimize", json=payload)
     assert resp.status_code == 400
-    # Pydantic validation error is expected for > MAX_LOCATIONS
+    # MAX_LOCATIONS を超えると Pydantic のバリデーションエラーになる想定
     assert resp.get_json().get("error") == "VALIDATION_ERROR"

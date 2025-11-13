@@ -181,6 +181,9 @@ VITE_API_BASE_URL=http://localhost:5000
 cd server
 source .venv/bin/activate
 
+# リポジトリルートに戻る
+cd ..
+
 # ユニットテスト
 pytest tests/unit/ -v
 

@@ -28,7 +28,7 @@ def _reload_config(monkeypatch, env: dict | None = None):
     if env:
         for k, v in env.items():
             monkeypatch.setenv(k, str(v))
-    # Reload config (reads environment at import time)
+    # インポート時に環境を読むため、設定を再読み込みする
     config = _reload_module("server.config")
     return config
 
@@ -68,11 +68,11 @@ def test_latlng_validation(monkeypatch):
     _reload_config(monkeypatch)
     schemas = _reload_module("server.schemas")
 
-    # Boundary OK
+    # 境界値は OK
     schemas.LatLng(lat=90, lng=180)
     schemas.LatLng(lat=-90, lng=-180)
 
-    # Out of range raises
+    # 範囲外なら例外になる
     with pytest.raises(ValidationError):
         schemas.LatLng(lat=90.0001, lng=0)
     with pytest.raises(ValidationError):
@@ -80,22 +80,21 @@ def test_latlng_validation(monkeypatch):
 
 
 def test_optimize_request_locations_count_limits(monkeypatch):
-    # Set MAX_LOCATIONS=3 and reload both config and schemas
+    # MAX_LOCATIONS=3 を設定し、config と schemas を両方再読み込みする
     _reload_config(monkeypatch, env={"MAX_LOCATIONS": "3"})
     schemas = _reload_module("server.schemas")
 
     depot = schemas.LatLng(lat=35.0, lng=135.0)
     loc = lambda n: [schemas.LatLng(lat=35.0 + i * 0.01, lng=135.0) for i in range(n)]
 
-    # 0 locations -> invalid
+    # 0 件のロケーションは無効
     with pytest.raises(ValidationError):
         schemas.OptimizeRequest(depot=depot, locations=loc(0))
 
-    # 1..3 locations -> valid
+    # 1〜3 件のロケーションは有効
     for n in (1, 2, 3):
         schemas.OptimizeRequest(depot=depot, locations=loc(n))
 
-    # 4 locations -> invalid over MAX_LOCATIONS
+    # 4 件のロケーションは MAX_LOCATIONS 超過で無効
     with pytest.raises(ValidationError):
         schemas.OptimizeRequest(depot=depot, locations=loc(4))
-

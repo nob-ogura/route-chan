@@ -6,7 +6,7 @@ import requests
 
 
 def _import_client():
-    # Local import to avoid import-time errors before implementation
+    # 実装前のインポート時エラーを避けるためローカルにインポートする
     import importlib
     return importlib.import_module("server.osrm_client")
 
@@ -14,7 +14,7 @@ def _import_client():
 def test_coords_to_path_formatting():
     client = _import_client()
     coords = [
-        (35.0, 135.0),  # lat, lng
+        (35.0, 135.0),  # 緯度・経度
         (35.1, 135.2),
         (-10.5, 0.25),
     ]
@@ -165,4 +165,3 @@ def test_get_route_geometries_http_error_raises():
     with pytest.raises(Exception) as ei:
         client.get_route_geometries(base_url, coords, (1.0, 2.0))
     assert "OSRM route request failed" in str(ei.value)
-

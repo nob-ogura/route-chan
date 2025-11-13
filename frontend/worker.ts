@@ -14,4 +14,5 @@ export default {
 		}
 		return res;
 	},
+	// @ts-expect-error
 } satisfies ExportedHandler<Env>;
